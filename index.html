@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>9 Nights at The Facility</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Creepster&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #00ff66;
+            font-family: 'Share Tech Mono', monospace;
+            user-select: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        .font-creepster { font-family: 'Creepster', cursive; }
+        .font-vt323 { font-family: 'VT323', monospace; }
+
+        /* CRT Scanline effect */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 40;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Glitch Effect */
+        .glitch-text {
+            text-shadow: 2px 0 #ff0055, -2px 0 #00e5ff;
+            animation: glitch 1.5s infinite alternate;
+        }
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 #ff0055, -2px 0 #00e5ff; }
+            25% { text-shadow: -2px 0 #ff0055, 2px 0 #00e5ff; }
+            50% { text-shadow: 3px -1px #ff0055, -1px 2px #00e5ff; }
+            75% { text-shadow: 0px 0px #ff0055, 0px 0px #00e5ff; }
+            100% { text-shadow: -3px 0 #ff0055, 3px 0 #00e5ff; }
+        }
+
+        .office-bg {
+            background: radial-gradient(circle at center, #1a1a1f 10%, #08080a 90%);
+        }
+
+        .camera-overlay {
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        /* UI Glows */
+        .glow-red { text-shadow: 0 0 8px #ff0033; }
+        .glow-green { text-shadow: 0 0 8px #00ff66; }
+        .glow-yellow { text-shadow: 0 0 8px #ffcc00; }
+
+        .btn-retro {
+            background: rgba(0, 40, 10, 0.85);
+            border: 2px solid #00ff66;
+            color: #00ff66;
+            transition: all 0.15s ease;
+        }
+        .btn-retro:hover, .btn-retro:active {
+            background: #00ff66;
+            color: #000;
+            box-shadow: 0 0 15px #00ff66;
+        }
+
+        .btn-danger {
+            background: rgba(40, 0, 10, 0.85);
+            border: 2px solid #ff0055;
+            color: #ff0055;
+        }
+        .btn-danger:hover, .btn-danger:active {
+            background: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0055;
+        }
+
+        /* Mobile Touch Pad Overlay */
+        .touch-pad {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen crt relative flex flex-col justify-between select-none overflow-hidden">
+
+    <!-- MAIN GAME CONTAINER -->
+    <div id="game-container" class="relative w-full h-full flex flex-col justify-between">
+
+        <!-- TITLE / MENU OVERLAY -->
+        <div id="screen-menu" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
+            <h1 class="text-6xl md:text-8xl font-creepster text-red-600 mb-2 tracking-wider glitch-text">9 NIGHTS</h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-6 max-w-lg font-vt323">Survive until 6 AM each night. Monitor cameras, seal doors, and conserve battery power.</p>
+            
+            <div id="night-selection" class="flex flex-wrap justify-center gap-3 mb-6 max-w-xl">
+                <!-- Night selection buttons generated dynamically -->
+            </div>
+
+            <button id="btn-start" onclick="startGame()" class="btn-retro px-8 py-4 text-2xl font-bold rounded tracking-widest uppercase">
+                ENTER NIGHT 1
+            </button>
+
+            <!-- Controller / Touch Status Indicator -->
+            <div class="mt-6 flex flex-col items-center gap-1 text-xs text-gray-400">
+                <div id="gamepad-status" class="text-yellow-400">Gamepad / Joy-Con: Disconnected</div>
+                <div class="text-gray-500">Touch Controls & Keyboard (`A`, `D`, `F`, `SPACE`) Supported</div>
+            </div>
+        </div>
+
+        <!-- NIGHT INTRO SCREEN -->
+        <div id="screen-intro" class="absolute inset-0 z-40 bg-black hidden flex flex-col items-center justify-center">
+            <h2 id="intro-title" class="text-6xl font-vt323 text-white glow-green mb-4">NIGHT 1</h2>
+            <p id="intro-sub" class="text-xl text-gray-400">12:00 AM</p>
+        </div>
+
+        <!-- NIGHT CLEAR OVERLAY -->
+        <div id="screen-clear" class="absolute inset-0 z-50 bg-black hidden flex flex-col items-center justify-center p-6 text-center">
+            <h2 class="text-5xl md:text-7xl font-vt323 text-green-400 mb-6 glow-green">6:00 AM</h2>
+            <p id="clear-message" class="text-2xl md:text-4xl text-red-500 font-creepster mb-8 tracking-wide glitch-text"></p>
+            <button onclick="nextNight()" class="btn-retro px-8 py-3 text-xl font-bold">CONTINUE</button>
+        </div>
+
+        <!-- GAME OVER / JUMPSCARE SCREEN -->
+        <div id="screen-jumpscare" class="absolute inset-0 z-50 bg-black hidden flex flex-col items-center justify-center overflow-hidden">
+            <canvas id="jumpscare-canvas" class="absolute inset-0 w-full h-full"></canvas>
+            <div id="death-menu" class="z-10 hidden flex flex-col items-center">
+                <h2 class="text-6xl font-creepster text-red-700 mb-4 glitch-text">YOU DIED</h2>
+                <button onclick="returnToMenu()" class="btn-danger px-8 py-3 text-xl font-bold">MAIN MENU</button>
+            </div>
+        </div>
+
+        <!-- TOP HUD -->
+        <header class="relative z-20 flex justify-between items-center p-4 bg-black/80 border-b border-green-900/50">
+            <div>
+                <div class="text-xl md:text-2xl font-vt323 glow-green">NIGHT <span id="hud-night">1</span> / 9</div>
+                <div class="text-[10px] md:text-xs text-green-700">FACILITY SECURITY SYSTEM</div>
+            </div>
+            <div class="text-right">
+                <div class="text-2xl md:text-3xl font-vt323 glow-yellow" id="hud-time">12 AM</div>
+                <div class="text-[10px] md:text-xs text-gray-400">SURVIVE UNTIL 6 AM</div>
+            </div>
+        </header>
+
+        <!-- MAIN OFFICE VIEW -->
+        <main class="relative flex-1 office-bg overflow-hidden flex items-center justify-center">
+            
+            <!-- OFFICE CANVAS -->
+            <canvas id="office-canvas" class="w-full h-full absolute inset-0"></canvas>
+
+            <!-- DOOR CONTROLS (DESKTOP & MOBILE TOUCH FRIENDLY) -->
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+                <button id="btn-door-left" onclick="toggleDoor('left')" class="btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]">
+                    <span class="text-[10px] md:text-xs">LEFT DOOR</span>
+                    <span id="txt-door-left" class="text-base md:text-lg font-bold">OPEN</span>
+                </button>
+            </div>
+
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+                <button id="btn-door-right" onclick="toggleDoor('right')" class="btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]">
+                    <span class="text-[10px] md:text-xs">RIGHT DOOR</span>
+                    <span id="txt-door-right" class="text-base md:text-lg font-bold">OPEN</span>
+                </button>
+            </div>
+
+            <!-- CENTER ACTION BUTTONS -->
+            <div class="absolute bottom-4 z-20 flex gap-2 md:gap-4">
+                <button id="btn-flashlight" onclick="toggleFlashlight()" class="btn-retro touch-pad px-4 py-3 md:px-6 md:py-3 rounded text-xs md:text-base flex items-center gap-1 md:gap-2">
+                    <span>FLASHLIGHT</span>
+                    <span id="txt-flashlight" class="font-bold text-gray-400">OFF</span>
+                </button>
+                <button id="btn-monitor" onclick="toggleMonitor()" class="btn-retro touch-pad px-4 py-3 md:px-6 md:py-3 rounded text-xs md:text-base flex items-center gap-1 md:gap-2">
+                    <span>MONITOR</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- CAMERA MONITOR OVERLAY -->
+        <div id="screen-monitor" class="absolute inset-0 z-30 bg-black/95 hidden flex flex-col md:flex-row p-3 md:p-4 gap-3 md:gap-4 camera-overlay">
+            
+            <!-- CAMERA FEED DISPLAY -->
+            <div class="relative flex-1 bg-gray-950 border border-green-900 rounded overflow-hidden flex items-center justify-center min-h-[200px]">
+                <canvas id="camera-canvas" class="w-full h-full absolute inset-0"></canvas>
+                <div class="absolute top-3 left-3 bg-black/80 px-3 py-1 rounded border border-green-500/30 text-[10px] md:text-xs glow-green">
+                    REC [<span id="cam-name">CAM 01 - MAIN HALL</span>]
+                </div>
+                <canvas id="static-canvas" class="absolute inset-0 w-full h-full pointer-events-none opacity-25"></canvas>
+            </div>
+
+            <!-- CAMERA MAP & SELECTOR -->
+            <div class="w-full md:w-80 bg-gray-900/80 border border-green-900/60 p-3 md:p-4 rounded flex flex-col justify-between">
+                <div>
+                    <h3 class="text-base md:text-lg font-vt323 border-b border-green-800 pb-1 mb-3 glow-green">SECURITY MAP</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button onclick="switchCamera(1)" id="btn-cam-1" class="btn-retro touch-pad text-xs p-3 text-left border-green-400">CAM 01: Hallway</button>
+                        <button onclick="switchCamera(2)" id="btn-cam-2" class="btn-retro touch-pad text-xs p-3 text-left">CAM 02: Storage</button>
+                        <button onclick="switchCamera(3)" id="btn-cam-3" class="btn-retro touch-pad text-xs p-3 text-left">CAM 03: Closet</button>
+                        <button onclick="switchCamera(4)" id="btn-cam-4" class="btn-retro touch-pad text-xs p-3 text-left">CAM 04: Entrance</button>
+                    </div>
+                </div>
+
+                <button onclick="toggleMonitor()" class="btn-danger touch-pad w-full py-3 text-xs md:text-sm font-bold uppercase tracking-wider">
+                    CLOSE MONITOR
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM HUD STATUS BAR -->
+        <footer class="relative z-20 flex justify-between items-center p-3 md:p-4 bg-black/90 border-t border-green-900/50">
+            <div class="flex items-center gap-3">
+                <div>
+                    <span class="text-[10px] text-gray-400 block">POWER</span>
+                    <div class="w-24 md:w-36 bg-gray-950 border border-green-700 h-4 md:h-5 rounded overflow-hidden p-0.5">
+                        <div id="power-bar" class="bg-green-500 h-full w-full transition-all duration-300"></div>
+                    </div>
+                </div>
+                <div class="text-lg md:text-xl font-vt323 glow-green" id="power-text">100%</div>
+            </div>
+
+            <div class="text-[10px] md:text-xs text-gray-400">
+                USAGE: <span id="power-usage" class="glow-green font-bold text-xs md:text-sm">LOW</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- AUDIO & GAMEPLAY ENGINE SCRIPT -->
+    <script>
+        // Game State Variables
+        let currentNight = 1;
+        let gameActive = false;
+        let power = 100;
+        let nightTimeSeconds = 0; // 60s total night duration (10s per hour)
+        let gameLoopInterval = null;
+        let monsterLoopInterval = null;
+        let gamepadPollInterval = null;
+
+        // Doors & Equipment Controls
+        let doorLeft = false;
+        let doorRight = false;
+        let flashlight = false;
+        let monitorOpen = false;
+        let currentCam = 1;
+
+        // Gamepad State tracking to prevent multi-triggering
+        let lastGamepadButtons = [];
+
+        // Monsters Setup
+        let monsters = [
+            { id: 1, name: "The Stalker", location: 1, aggro: 1, side: 'left' },
+            { id: 2, name: "The Crawler", location: 1, aggro: 0, side: 'right' }
+        ];
+
+        // Web Audio Synthesizer
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function playNoise(duration, vol = 0.05) {
+            if (!audioCtx) return;
+            try {
+                let bufferSize = audioCtx.sampleRate * duration;
+                let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                let data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                let noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                let gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                noise.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e) {}
+        }
+
+        function playDoorSound() {
+            playTone(80, 'sawtooth', 0.2, 0.2);
+            playNoise(0.2, 0.1);
+        }
+
+        function playFootstep() {
+            playTone(40 + Math.random() * 20, 'sine', 0.3, 0.2);
+        }
+
+        function playJumpscareSound() {
+            if (!audioCtx) return;
+            for(let i=0; i<5; i++) {
+                setTimeout(() => {
+                    playTone(200 + Math.random() * 800, 'sawtooth', 1.5, 0.4);
+                    playTone(150 + Math.random() * 400, 'square', 1.5, 0.3);
+                    playNoise(1.5, 0.3);
+                }, i * 50);
+            }
+        }
+
+        // Night Selector Initialization
+        function initMenu() {
+            const container = document.getElementById('night-selection');
+            container.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const btn = document.createElement('button');
+                btn.className = `touch-pad px-3 py-2 rounded text-xs md:text-sm font-bold border ${i === currentNight ? 'border-green-400 bg-green-950 text-green-300' : 'border-gray-800 text-gray-500'}`;
+                btn.innerText = `Night ${i}`;
+                btn.onclick = () => selectNight(i);
+                container.appendChild(btn);
+            }
+            document.getElementById('btn-start').innerText = `ENTER NIGHT ${currentNight}`;
+        }
+
+        function selectNight(n) {
+            currentNight = n;
+            initMenu();
+        }
+
+        // Core Game Setup & Loop
+        function startGame() {
+            initAudio();
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-intro').classList.remove('hidden');
+            document.getElementById('intro-title').innerText = `NIGHT ${currentNight}`;
+            
+            // Set scaling aggro parameters per night
+            monsters[0].aggro = Math.min(10, currentNight * 1.2);
+            monsters[1].aggro = currentNight > 2 ? Math.min(10, (currentNight - 2) * 1.4) : 0;
+            monsters[0].location = 1;
+            monsters[1].location = 1;
+
+            power = 100;
+            nightTimeSeconds = 0;
+            doorLeft = false;
+            doorRight = false;
+            flashlight = false;
+            monitorOpen = false;
+
+            updateUI();
+
+            setTimeout(() => {
+                document.getElementById('screen-intro').classList.add('hidden');
+                gameActive = true;
+                runGame();
+            }, 2500);
+        }
+
+        function runGame() {
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            // Time & Power Loop (1 tick / sec)
+            gameLoopInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                nightTimeSeconds++;
+                let hour = Math.floor(nightTimeSeconds / 10);
+                document.getElementById('hud-time').innerText = hour === 0 ? '12 AM' : `${hour} AM`;
+
+                if (nightTimeSeconds >= 60) {
+                    winNight();
+                    return;
+                }
+
+                let usage = 1;
+                if (doorLeft) usage++;
+                if (doorRight) usage++;
+                if (flashlight) usage++;
+                if (monitorOpen) usage++;
+
+                power -= usage * (0.6 + (currentNight * 0.05));
+                if (power <= 0) {
+                    power = 0;
+                    powerOutage();
+                }
+
+                updateUI();
+            }, 1000);
+
+            // Monster Movement AI Loop
+            monsterLoopInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                monsters.forEach(m => {
+                    if (m.aggro === 0) return;
+
+                    let roll = Math.random() * 20;
+                    if (roll < m.aggro) {
+                        if (m.location < 4) {
+                            m.location++;
+                            if (monitorOpen && currentCam === m.location) {
+                                playNoise(0.3, 0.1);
+                            }
+                        } else if (m.location === 4) {
+                            let doorClosed = m.side === 'left' ? doorLeft : doorRight;
+                            if (doorClosed) {
+                                playDoorSound();
+                                m.location = Math.floor(Math.random() * 2) + 1;
+                            } else {
+                                m.location = 5;
+                                triggerJumpscare(m);
+                            }
+                        }
+                    }
+                });
+
+                if (Math.random() < 0.2 + (currentNight * 0.05)) {
+                    playFootstep();
+                }
+
+                renderOffice();
+                renderCamera();
+            }, 3000 - (currentNight * 200));
+        }
+
+        function powerOutage() {
+            doorLeft = false;
+            doorRight = false;
+            flashlight = false;
+            monitorOpen = false;
+            document.getElementById('screen-monitor').classList.add('hidden');
+            updateUI();
+            playTone(30, 'sawtooth', 1.0, 0.3);
+
+            setTimeout(() => {
+                if (gameActive) triggerJumpscare(monsters[0]);
+            }, 3000 + Math.random() * 3000);
+        }
+
+        function triggerJumpscare(monster) {
+            gameActive = false;
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            playJumpscareSound();
+            document.getElementById('screen-jumpscare').classList.remove('hidden');
+
+            const canvas = document.getElementById('jumpscare-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            let frame = 0;
+            let scareInterval = setInterval(() => {
+                frame++;
+                ctx.fillStyle = frame % 2 === 0 ? '#ff0000' : '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                ctx.translate(canvas.width / 2 + (Math.random()*40-20), canvas.height / 2 + (Math.random()*40-20));
+                let scale = 1 + frame * 0.15;
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.arc(0, 0, 120, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(-40, -20, 25, 0, Math.PI * 2);
+                ctx.arc(40, -20, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-40 + (Math.random()*6-3), -20, 8, 0, Math.PI * 2);
+                ctx.arc(40 + (Math.random()*6-3), -20, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.ellipse(0, 50, 60, 40, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                for(let i = -50; i <= 50; i += 15) {
+                    ctx.fillRect(i, 20, 8, 25);
+                    ctx.fillRect(i, 55, 8, 25);
+                }
+
+                ctx.restore();
+
+                if (frame > 25) {
+                    clearInterval(scareInterval);
+                    document.getElementById('death-menu').classList.remove('hidden');
+                }
+            }, 40);
+        }
+
+        function winNight() {
+            gameActive = false;
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            const clearScreen = document.getElementById('screen-clear');
+            const clearMsg = document.getElementById('clear-message');
+
+            if (currentNight < 9) {
+                clearMsg.innerText = "Congrats you made it. But it's not the end.";
+            } else {
+                clearMsg.innerText = "You made it. But he's coming for you again.";
+            }
+
+            clearScreen.classList.remove('hidden');
+        }
+
+        function nextNight() {
+            document.getElementById('screen-clear').classList.add('hidden');
+            if (currentNight < 9) {
+                currentNight++;
+            }
+            initMenu();
+            startGame();
+        }
+
+        function returnToMenu() {
+            document.getElementById('screen-jumpscare').classList.add('hidden');
+            document.getElementById('death-menu').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+            initMenu();
+        }
+
+        // Gameplay Interaction Controls
+        function toggleDoor(side) {
+            if (!gameActive || power <= 0) return;
+            if (side === 'left') doorLeft = !doorLeft;
+            if (side === 'right') doorRight = !doorRight;
+            playDoorSound();
+            updateUI();
+            renderOffice();
+        }
+
+        function toggleFlashlight() {
+            if (!gameActive || power <= 0) return;
+            flashlight = !flashlight;
+            playTone(600, 'square', 0.05, 0.1);
+            updateUI();
+            renderOffice();
+        }
+
+        function toggleMonitor() {
+            if (!gameActive || power <= 0) return;
+            monitorOpen = !monitorOpen;
+            playTone(300, 'sine', 0.1, 0.1);
+            document.getElementById('screen-monitor').classList.toggle('hidden', !monitorOpen);
+            updateUI();
+            if (monitorOpen) renderCamera();
+        }
+
+        function switchCamera(camNum) {
+            currentCam = camNum;
+            playNoise(0.1, 0.1);
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`btn-cam-${i}`).classList.toggle('border-green-400', i === camNum);
+            }
+            document.getElementById('cam-name').innerText = `CAM 0${camNum} - ${getCameraName(camNum)}`;
+            renderCamera();
+        }
+
+        function getCameraName(num) {
+            switch(num) {
+                case 1: return "MAIN HALL";
+                case 2: return "STORAGE VENT";
+                case 3: return "BACK CLOSET";
+                case 4: return "DOOR ENTRANCE";
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('hud-night').innerText = currentNight;
+            
+            const pBar = document.getElementById('power-bar');
+            pBar.style.width = `${Math.max(0, power)}%`;
+            if (power < 20) pBar.className = "bg-red-600 h-full transition-all duration-300";
+            else if (power < 50) pBar.className = "bg-yellow-500 h-full transition-all duration-300";
+            else pBar.className = "bg-green-500 h-full transition-all duration-300";
+
+            document.getElementById('power-text').innerText = `${Math.round(power)}%`;
+
+            document.getElementById('txt-door-left').innerText = doorLeft ? "CLOSED" : "OPEN";
+            document.getElementById('btn-door-left').className = doorLeft ? "btn-danger touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]" : "btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]";
+
+            document.getElementById('txt-door-right').innerText = doorRight ? "CLOSED" : "OPEN";
+            document.getElementById('btn-door-right').className = doorRight ? "btn-danger touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]" : "btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]";
+
+            document.getElementById('txt-flashlight').innerText = flashlight ? "ON" : "OFF";
+            document.getElementById('txt-flashlight').className = flashlight ? "font-bold text-yellow-400 glow-yellow" : "font-bold text-gray-400";
+
+            let usage = 1 + (doorLeft?1:0) + (doorRight?1:0) + (flashlight?1:0) + (monitorOpen?1:0);
+            let usageTxt = "LOW";
+            if (usage === 2) usageTxt = "MEDIUM";
+            if (usage === 3) usageTxt = "HIGH";
+            if (usage >= 4) usageTxt = "CRITICAL";
+            document.getElementById('power-usage').innerText = usageTxt;
+        }
+
+        function renderOffice() {
+            const canvas = document.getElementById('office-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Left Door Frame
+            ctx.fillStyle = doorLeft ? '#220505' : '#111115';
+            ctx.fillRect(0, 0, 100, canvas.height);
+            ctx.strokeStyle = doorLeft ? '#ff0033' : '#333';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 100, canvas.height);
+
+            // Right Door Frame
+            ctx.fillStyle = doorRight ? '#220505' : '#111115';
+            ctx.fillRect(canvas.width - 100, 0, 100, canvas.height);
+            ctx.strokeStyle = doorRight ? '#ff0033' : '#333';
+            ctx.strokeRect(canvas.width - 100, 0, 100, canvas.height);
+
+            if (flashlight) {
+                let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 20, canvas.width/2, canvas.height/2, 300);
+                grad.addColorStop(0, 'rgba(255, 255, 200, 0.35)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                monsters.forEach(m => {
+                    if (m.location === 4) {
+                        let xPos = m.side === 'left' ? 50 : canvas.width - 50;
+                        ctx.fillStyle = '#ff0000';
+                        ctx.beginPath();
+                        ctx.arc(xPos, canvas.height/2, 15, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        function renderCamera() {
+            if (!monitorOpen) return;
+            const canvas = document.getElementById('camera-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.fillStyle = '#0a0d0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.05)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.15)';
+            ctx.font = '36px "Share Tech Mono"';
+            ctx.fillText(getCameraName(currentCam), 30, canvas.height / 2);
+
+            monsters.forEach(m => {
+                if (m.location === currentCam) {
+                    ctx.fillStyle = '#ff0033';
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(canvas.width / 2 + (m.id * 30 - 45), canvas.height / 2, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(canvas.width / 2 + (m.id * 30 - 55), canvas.height / 2 - 5, 6, 6);
+                    ctx.fillRect(canvas.width / 2 + (m.id * 30 - 38), canvas.height / 2 - 5, 6, 6);
+                }
+            });
+
+            const staticCanvas = document.getElementById('static-canvas');
+            const sCtx = staticCanvas.getContext('2d');
+            staticCanvas.width = 200;
+            staticCanvas.height = 150;
+            let imgData = sCtx.createImageData(200, 150);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                let v = Math.random() * 255;
+                imgData.data[i] = v;
+                imgData.data[i+1] = v;
+                imgData.data[i+2] = v;
+                imgData.data[i+3] = 40;
+            }
+            sCtx.putImageData(imgData, 0, 0);
+        }
+
+        // Web Gamepad / Bluetooth Joy-Con Polling Engine
+        function pollGamepad() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gpFound = false;
+
+            for (let i = 0; i < gamepads.length; i++) {
+                const gp = gamepads[i];
+                if (gp) {
+                    gpFound = true;
+                    document.getElementById('gamepad-status').innerText = `Connected: ${gp.id.substring(0, 25)}...`;
+                    document.getElementById('gamepad-status').className = "text-green-400 glow-green";
+
+                    if (gameActive) {
+                        // Button 0 (A / Cross), Button 4 (L1) -> Left Door
+                        if (gp.buttons[4]?.pressed || (gp.buttons[0]?.pressed && !lastGamepadButtons[0])) {
+                            if (!lastGamepadButtons[4] && !lastGamepadButtons[0]) toggleDoor('left');
+                        }
+                        // Button 5 (R1), Button 1 (B / Circle) -> Right Door
+                        if (gp.buttons[5]?.pressed || (gp.buttons[1]?.pressed && !lastGamepadButtons[1])) {
+                            if (!lastGamepadButtons[5] && !lastGamepadButtons[1]) toggleDoor('right');
+                        }
+                        // Button 2 (X / Square), Button 6 (ZL) -> Flashlight
+                        if (gp.buttons[2]?.pressed || gp.buttons[6]?.pressed) {
+                            if (!lastGamepadButtons[2] && !lastGamepadButtons[6]) toggleFlashlight();
+                        }
+                        // Button 3 (Y / Triangle), Button 9 (Select/Options) -> Monitor Toggle
+                        if (gp.buttons[3]?.pressed || gp.buttons[9]?.pressed) {
+                            if (!lastGamepadButtons[3] && !lastGamepadButtons[9]) toggleMonitor();
+                        }
+
+                        // Save current button states to prevent re-triggering on hold
+                        lastGamepadButtons = gp.buttons.map(b => b.pressed);
+                    }
+                    break;
+                }
+            }
+
+            if (!gpFound) {
+                document.getElementById('gamepad-status').innerText = "Gamepad / Joy-Con: Disconnected";
+                document.getElementById('gamepad-status').className = "text-yellow-400";
+            }
+        }
+
+        // Keyboard Event Handlers
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'a' || e.key === 'A') toggleDoor('left');
+            if (e.key === 'd' || e.key === 'D') toggleDoor('right');
+            if (e.key === 'f' || e.key === 'F') toggleFlashlight();
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleMonitor();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (gameActive) {
+                renderOffice();
+                renderCamera();
+            }
+        });
+
+        window.onload = () => {
+            initMenu();
+            // Start continuous loop for Gamepad / Joy-Con input detection
+            setInterval(pollGamepad, 100);
+        };
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>9 Nights at The Facility</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Creepster&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #00ff66;
+            font-family: 'Share Tech Mono', monospace;
+            user-select: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        .font-creepster { font-family: 'Creepster', cursive; }
+        .font-vt323 { font-family: 'VT323', monospace; }
+
+        /* CRT Scanline effect */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 40;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Glitch Effect */
+        .glitch-text {
+            text-shadow: 2px 0 #ff0055, -2px 0 #00e5ff;
+            animation: glitch 1.5s infinite alternate;
+        }
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 #ff0055, -2px 0 #00e5ff; }
+            25% { text-shadow: -2px 0 #ff0055, 2px 0 #00e5ff; }
+            50% { text-shadow: 3px -1px #ff0055, -1px 2px #00e5ff; }
+            75% { text-shadow: 0px 0px #ff0055, 0px 0px #00e5ff; }
+            100% { text-shadow: -3px 0 #ff0055, 3px 0 #00e5ff; }
+        }
+
+        .office-bg {
+            background: radial-gradient(circle at center, #1a1a1f 10%, #08080a 90%);
+        }
+
+        .camera-overlay {
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        /* UI Glows */
+        .glow-red { text-shadow: 0 0 8px #ff0033; }
+        .glow-green { text-shadow: 0 0 8px #00ff66; }
+        .glow-yellow { text-shadow: 0 0 8px #ffcc00; }
+
+        .btn-retro {
+            background: rgba(0, 40, 10, 0.85);
+            border: 2px solid #00ff66;
+            color: #00ff66;
+            transition: all 0.15s ease;
+        }
+        .btn-retro:hover, .btn-retro:active {
+            background: #00ff66;
+            color: #000;
+            box-shadow: 0 0 15px #00ff66;
+        }
+
+        .btn-danger {
+            background: rgba(40, 0, 10, 0.85);
+            border: 2px solid #ff0055;
+            color: #ff0055;
+        }
+        .btn-danger:hover, .btn-danger:active {
+            background: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0055;
+        }
+
+        /* Mobile Touch Pad Overlay */
+        .touch-pad {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen crt relative flex flex-col justify-between select-none overflow-hidden">
+
+    <!-- MAIN GAME CONTAINER -->
+    <div id="game-container" class="relative w-full h-full flex flex-col justify-between">
+
+        <!-- TITLE / MENU OVERLAY -->
+        <div id="screen-menu" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
+            <h1 class="text-6xl md:text-8xl font-creepster text-red-600 mb-2 tracking-wider glitch-text">9 NIGHTS</h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-6 max-w-lg font-vt323">Survive until 6 AM each night. Monitor cameras, seal doors, and conserve battery power.</p>
+            
+            <div id="night-selection" class="flex flex-wrap justify-center gap-3 mb-6 max-w-xl">
+                <!-- Night selection buttons generated dynamically -->
+            </div>
+
+            <button id="btn-start" onclick="startGame()" class="btn-retro px-8 py-4 text-2xl font-bold rounded tracking-widest uppercase">
+                ENTER NIGHT 1
+            </button>
+
+            <!-- Controller / Touch Status Indicator -->
+            <div class="mt-6 flex flex-col items-center gap-1 text-xs text-gray-400">
+                <div id="gamepad-status" class="text-yellow-400">Gamepad / Joy-Con: Disconnected</div>
+                <div class="text-gray-500">Touch Controls & Keyboard (`A`, `D`, `F`, `SPACE`) Supported</div>
+            </div>
+        </div>
+
+        <!-- NIGHT INTRO SCREEN -->
+        <div id="screen-intro" class="absolute inset-0 z-40 bg-black hidden flex flex-col items-center justify-center">
+            <h2 id="intro-title" class="text-6xl font-vt323 text-white glow-green mb-4">NIGHT 1</h2>
+            <p id="intro-sub" class="text-xl text-gray-400">12:00 AM</p>
+        </div>
+
+        <!-- NIGHT CLEAR OVERLAY -->
+        <div id="screen-clear" class="absolute inset-0 z-50 bg-black hidden flex flex-col items-center justify-center p-6 text-center">
+            <h2 class="text-5xl md:text-7xl font-vt323 text-green-400 mb-6 glow-green">6:00 AM</h2>
+            <p id="clear-message" class="text-2xl md:text-4xl text-red-500 font-creepster mb-8 tracking-wide glitch-text"></p>
+            <button onclick="nextNight()" class="btn-retro px-8 py-3 text-xl font-bold">CONTINUE</button>
+        </div>
+
+        <!-- GAME OVER / JUMPSCARE SCREEN -->
+        <div id="screen-jumpscare" class="absolute inset-0 z-50 bg-black hidden flex flex-col items-center justify-center overflow-hidden">
+            <canvas id="jumpscare-canvas" class="absolute inset-0 w-full h-full"></canvas>
+            <div id="death-menu" class="z-10 hidden flex flex-col items-center">
+                <h2 class="text-6xl font-creepster text-red-700 mb-4 glitch-text">YOU DIED</h2>
+                <button onclick="returnToMenu()" class="btn-danger px-8 py-3 text-xl font-bold">MAIN MENU</button>
+            </div>
+        </div>
+
+        <!-- TOP HUD -->
+        <header class="relative z-20 flex justify-between items-center p-4 bg-black/80 border-b border-green-900/50">
+            <div>
+                <div class="text-xl md:text-2xl font-vt323 glow-green">NIGHT <span id="hud-night">1</span> / 9</div>
+                <div class="text-[10px] md:text-xs text-green-700">FACILITY SECURITY SYSTEM</div>
+            </div>
+            <div class="text-right">
+                <div class="text-2xl md:text-3xl font-vt323 glow-yellow" id="hud-time">12 AM</div>
+                <div class="text-[10px] md:text-xs text-gray-400">SURVIVE UNTIL 6 AM</div>
+            </div>
+        </header>
+
+        <!-- MAIN OFFICE VIEW -->
+        <main class="relative flex-1 office-bg overflow-hidden flex items-center justify-center">
+            
+            <!-- OFFICE CANVAS -->
+            <canvas id="office-canvas" class="w-full h-full absolute inset-0"></canvas>
+
+            <!-- DOOR CONTROLS (DESKTOP & MOBILE TOUCH FRIENDLY) -->
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+                <button id="btn-door-left" onclick="toggleDoor('left')" class="btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]">
+                    <span class="text-[10px] md:text-xs">LEFT DOOR</span>
+                    <span id="txt-door-left" class="text-base md:text-lg font-bold">OPEN</span>
+                </button>
+            </div>
+
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+                <button id="btn-door-right" onclick="toggleDoor('right')" class="btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]">
+                    <span class="text-[10px] md:text-xs">RIGHT DOOR</span>
+                    <span id="txt-door-right" class="text-base md:text-lg font-bold">OPEN</span>
+                </button>
+            </div>
+
+            <!-- CENTER ACTION BUTTONS -->
+            <div class="absolute bottom-4 z-20 flex gap-2 md:gap-4">
+                <button id="btn-flashlight" onclick="toggleFlashlight()" class="btn-retro touch-pad px-4 py-3 md:px-6 md:py-3 rounded text-xs md:text-base flex items-center gap-1 md:gap-2">
+                    <span>FLASHLIGHT</span>
+                    <span id="txt-flashlight" class="font-bold text-gray-400">OFF</span>
+                </button>
+                <button id="btn-monitor" onclick="toggleMonitor()" class="btn-retro touch-pad px-4 py-3 md:px-6 md:py-3 rounded text-xs md:text-base flex items-center gap-1 md:gap-2">
+                    <span>MONITOR</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- CAMERA MONITOR OVERLAY -->
+        <div id="screen-monitor" class="absolute inset-0 z-30 bg-black/95 hidden flex flex-col md:flex-row p-3 md:p-4 gap-3 md:gap-4 camera-overlay">
+            
+            <!-- CAMERA FEED DISPLAY -->
+            <div class="relative flex-1 bg-gray-950 border border-green-900 rounded overflow-hidden flex items-center justify-center min-h-[200px]">
+                <canvas id="camera-canvas" class="w-full h-full absolute inset-0"></canvas>
+                <div class="absolute top-3 left-3 bg-black/80 px-3 py-1 rounded border border-green-500/30 text-[10px] md:text-xs glow-green">
+                    REC [<span id="cam-name">CAM 01 - MAIN HALL</span>]
+                </div>
+                <canvas id="static-canvas" class="absolute inset-0 w-full h-full pointer-events-none opacity-25"></canvas>
+            </div>
+
+            <!-- CAMERA MAP & SELECTOR -->
+            <div class="w-full md:w-80 bg-gray-900/80 border border-green-900/60 p-3 md:p-4 rounded flex flex-col justify-between">
+                <div>
+                    <h3 class="text-base md:text-lg font-vt323 border-b border-green-800 pb-1 mb-3 glow-green">SECURITY MAP</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button onclick="switchCamera(1)" id="btn-cam-1" class="btn-retro touch-pad text-xs p-3 text-left border-green-400">CAM 01: Hallway</button>
+                        <button onclick="switchCamera(2)" id="btn-cam-2" class="btn-retro touch-pad text-xs p-3 text-left">CAM 02: Storage</button>
+                        <button onclick="switchCamera(3)" id="btn-cam-3" class="btn-retro touch-pad text-xs p-3 text-left">CAM 03: Closet</button>
+                        <button onclick="switchCamera(4)" id="btn-cam-4" class="btn-retro touch-pad text-xs p-3 text-left">CAM 04: Entrance</button>
+                    </div>
+                </div>
+
+                <button onclick="toggleMonitor()" class="btn-danger touch-pad w-full py-3 text-xs md:text-sm font-bold uppercase tracking-wider">
+                    CLOSE MONITOR
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM HUD STATUS BAR -->
+        <footer class="relative z-20 flex justify-between items-center p-3 md:p-4 bg-black/90 border-t border-green-900/50">
+            <div class="flex items-center gap-3">
+                <div>
+                    <span class="text-[10px] text-gray-400 block">POWER</span>
+                    <div class="w-24 md:w-36 bg-gray-950 border border-green-700 h-4 md:h-5 rounded overflow-hidden p-0.5">
+                        <div id="power-bar" class="bg-green-500 h-full w-full transition-all duration-300"></div>
+                    </div>
+                </div>
+                <div class="text-lg md:text-xl font-vt323 glow-green" id="power-text">100%</div>
+            </div>
+
+            <div class="text-[10px] md:text-xs text-gray-400">
+                USAGE: <span id="power-usage" class="glow-green font-bold text-xs md:text-sm">LOW</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- AUDIO & GAMEPLAY ENGINE SCRIPT -->
+    <script>
+        // Game State Variables
+        let currentNight = 1;
+        let gameActive = false;
+        let power = 100;
+        let nightTimeSeconds = 0; // 60s total night duration (10s per hour)
+        let gameLoopInterval = null;
+        let monsterLoopInterval = null;
+        let gamepadPollInterval = null;
+
+        // Doors & Equipment Controls
+        let doorLeft = false;
+        let doorRight = false;
+        let flashlight = false;
+        let monitorOpen = false;
+        let currentCam = 1;
+
+        // Gamepad State tracking to prevent multi-triggering
+        let lastGamepadButtons = [];
+
+        // Monsters Setup
+        let monsters = [
+            { id: 1, name: "The Stalker", location: 1, aggro: 1, side: 'left' },
+            { id: 2, name: "The Crawler", location: 1, aggro: 0, side: 'right' }
+        ];
+
+        // Web Audio Synthesizer
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function playNoise(duration, vol = 0.05) {
+            if (!audioCtx) return;
+            try {
+                let bufferSize = audioCtx.sampleRate * duration;
+                let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                let data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                let noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                let gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                noise.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e) {}
+        }
+
+        function playDoorSound() {
+            playTone(80, 'sawtooth', 0.2, 0.2);
+            playNoise(0.2, 0.1);
+        }
+
+        function playFootstep() {
+            playTone(40 + Math.random() * 20, 'sine', 0.3, 0.2);
+        }
+
+        function playJumpscareSound() {
+            if (!audioCtx) return;
+            for(let i=0; i<5; i++) {
+                setTimeout(() => {
+                    playTone(200 + Math.random() * 800, 'sawtooth', 1.5, 0.4);
+                    playTone(150 + Math.random() * 400, 'square', 1.5, 0.3);
+                    playNoise(1.5, 0.3);
+                }, i * 50);
+            }
+        }
+
+        // Night Selector Initialization
+        function initMenu() {
+            const container = document.getElementById('night-selection');
+            container.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const btn = document.createElement('button');
+                btn.className = `touch-pad px-3 py-2 rounded text-xs md:text-sm font-bold border ${i === currentNight ? 'border-green-400 bg-green-950 text-green-300' : 'border-gray-800 text-gray-500'}`;
+                btn.innerText = `Night ${i}`;
+                btn.onclick = () => selectNight(i);
+                container.appendChild(btn);
+            }
+            document.getElementById('btn-start').innerText = `ENTER NIGHT ${currentNight}`;
+        }
+
+        function selectNight(n) {
+            currentNight = n;
+            initMenu();
+        }
+
+        // Core Game Setup & Loop
+        function startGame() {
+            initAudio();
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-intro').classList.remove('hidden');
+            document.getElementById('intro-title').innerText = `NIGHT ${currentNight}`;
+            
+            // Set scaling aggro parameters per night
+            monsters[0].aggro = Math.min(10, currentNight * 1.2);
+            monsters[1].aggro = currentNight > 2 ? Math.min(10, (currentNight - 2) * 1.4) : 0;
+            monsters[0].location = 1;
+            monsters[1].location = 1;
+
+            power = 100;
+            nightTimeSeconds = 0;
+            doorLeft = false;
+            doorRight = false;
+            flashlight = false;
+            monitorOpen = false;
+
+            updateUI();
+
+            setTimeout(() => {
+                document.getElementById('screen-intro').classList.add('hidden');
+                gameActive = true;
+                runGame();
+            }, 2500);
+        }
+
+        function runGame() {
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            // Time & Power Loop (1 tick / sec)
+            gameLoopInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                nightTimeSeconds++;
+                let hour = Math.floor(nightTimeSeconds / 10);
+                document.getElementById('hud-time').innerText = hour === 0 ? '12 AM' : `${hour} AM`;
+
+                if (nightTimeSeconds >= 60) {
+                    winNight();
+                    return;
+                }
+
+                let usage = 1;
+                if (doorLeft) usage++;
+                if (doorRight) usage++;
+                if (flashlight) usage++;
+                if (monitorOpen) usage++;
+
+                power -= usage * (0.6 + (currentNight * 0.05));
+                if (power <= 0) {
+                    power = 0;
+                    powerOutage();
+                }
+
+                updateUI();
+            }, 1000);
+
+            // Monster Movement AI Loop
+            monsterLoopInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                monsters.forEach(m => {
+                    if (m.aggro === 0) return;
+
+                    let roll = Math.random() * 20;
+                    if (roll < m.aggro) {
+                        if (m.location < 4) {
+                            m.location++;
+                            if (monitorOpen && currentCam === m.location) {
+                                playNoise(0.3, 0.1);
+                            }
+                        } else if (m.location === 4) {
+                            let doorClosed = m.side === 'left' ? doorLeft : doorRight;
+                            if (doorClosed) {
+                                playDoorSound();
+                                m.location = Math.floor(Math.random() * 2) + 1;
+                            } else {
+                                m.location = 5;
+                                triggerJumpscare(m);
+                            }
+                        }
+                    }
+                });
+
+                if (Math.random() < 0.2 + (currentNight * 0.05)) {
+                    playFootstep();
+                }
+
+                renderOffice();
+                renderCamera();
+            }, 3000 - (currentNight * 200));
+        }
+
+        function powerOutage() {
+            doorLeft = false;
+            doorRight = false;
+            flashlight = false;
+            monitorOpen = false;
+            document.getElementById('screen-monitor').classList.add('hidden');
+            updateUI();
+            playTone(30, 'sawtooth', 1.0, 0.3);
+
+            setTimeout(() => {
+                if (gameActive) triggerJumpscare(monsters[0]);
+            }, 3000 + Math.random() * 3000);
+        }
+
+        function triggerJumpscare(monster) {
+            gameActive = false;
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            playJumpscareSound();
+            document.getElementById('screen-jumpscare').classList.remove('hidden');
+
+            const canvas = document.getElementById('jumpscare-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            let frame = 0;
+            let scareInterval = setInterval(() => {
+                frame++;
+                ctx.fillStyle = frame % 2 === 0 ? '#ff0000' : '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                ctx.translate(canvas.width / 2 + (Math.random()*40-20), canvas.height / 2 + (Math.random()*40-20));
+                let scale = 1 + frame * 0.15;
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.arc(0, 0, 120, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(-40, -20, 25, 0, Math.PI * 2);
+                ctx.arc(40, -20, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-40 + (Math.random()*6-3), -20, 8, 0, Math.PI * 2);
+                ctx.arc(40 + (Math.random()*6-3), -20, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.ellipse(0, 50, 60, 40, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                for(let i = -50; i <= 50; i += 15) {
+                    ctx.fillRect(i, 20, 8, 25);
+                    ctx.fillRect(i, 55, 8, 25);
+                }
+
+                ctx.restore();
+
+                if (frame > 25) {
+                    clearInterval(scareInterval);
+                    document.getElementById('death-menu').classList.remove('hidden');
+                }
+            }, 40);
+        }
+
+        function winNight() {
+            gameActive = false;
+            clearInterval(gameLoopInterval);
+            clearInterval(monsterLoopInterval);
+
+            const clearScreen = document.getElementById('screen-clear');
+            const clearMsg = document.getElementById('clear-message');
+
+            if (currentNight < 9) {
+                clearMsg.innerText = "Congrats you made it. But it's not the end.";
+            } else {
+                clearMsg.innerText = "You made it. But he's coming for you again.";
+            }
+
+            clearScreen.classList.remove('hidden');
+        }
+
+        function nextNight() {
+            document.getElementById('screen-clear').classList.add('hidden');
+            if (currentNight < 9) {
+                currentNight++;
+            }
+            initMenu();
+            startGame();
+        }
+
+        function returnToMenu() {
+            document.getElementById('screen-jumpscare').classList.add('hidden');
+            document.getElementById('death-menu').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+            initMenu();
+        }
+
+        // Gameplay Interaction Controls
+        function toggleDoor(side) {
+            if (!gameActive || power <= 0) return;
+            if (side === 'left') doorLeft = !doorLeft;
+            if (side === 'right') doorRight = !doorRight;
+            playDoorSound();
+            updateUI();
+            renderOffice();
+        }
+
+        function toggleFlashlight() {
+            if (!gameActive || power <= 0) return;
+            flashlight = !flashlight;
+            playTone(600, 'square', 0.05, 0.1);
+            updateUI();
+            renderOffice();
+        }
+
+        function toggleMonitor() {
+            if (!gameActive || power <= 0) return;
+            monitorOpen = !monitorOpen;
+            playTone(300, 'sine', 0.1, 0.1);
+            document.getElementById('screen-monitor').classList.toggle('hidden', !monitorOpen);
+            updateUI();
+            if (monitorOpen) renderCamera();
+        }
+
+        function switchCamera(camNum) {
+            currentCam = camNum;
+            playNoise(0.1, 0.1);
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`btn-cam-${i}`).classList.toggle('border-green-400', i === camNum);
+            }
+            document.getElementById('cam-name').innerText = `CAM 0${camNum} - ${getCameraName(camNum)}`;
+            renderCamera();
+        }
+
+        function getCameraName(num) {
+            switch(num) {
+                case 1: return "MAIN HALL";
+                case 2: return "STORAGE VENT";
+                case 3: return "BACK CLOSET";
+                case 4: return "DOOR ENTRANCE";
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('hud-night').innerText = currentNight;
+            
+            const pBar = document.getElementById('power-bar');
+            pBar.style.width = `${Math.max(0, power)}%`;
+            if (power < 20) pBar.className = "bg-red-600 h-full transition-all duration-300";
+            else if (power < 50) pBar.className = "bg-yellow-500 h-full transition-all duration-300";
+            else pBar.className = "bg-green-500 h-full transition-all duration-300";
+
+            document.getElementById('power-text').innerText = `${Math.round(power)}%`;
+
+            document.getElementById('txt-door-left').innerText = doorLeft ? "CLOSED" : "OPEN";
+            document.getElementById('btn-door-left').className = doorLeft ? "btn-danger touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]" : "btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]";
+
+            document.getElementById('txt-door-right').innerText = doorRight ? "CLOSED" : "OPEN";
+            document.getElementById('btn-door-right').className = doorRight ? "btn-danger touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]" : "btn-retro touch-pad p-4 rounded flex flex-col items-center min-w-[85px] md:min-w-[100px]";
+
+            document.getElementById('txt-flashlight').innerText = flashlight ? "ON" : "OFF";
+            document.getElementById('txt-flashlight').className = flashlight ? "font-bold text-yellow-400 glow-yellow" : "font-bold text-gray-400";
+
+            let usage = 1 + (doorLeft?1:0) + (doorRight?1:0) + (flashlight?1:0) + (monitorOpen?1:0);
+            let usageTxt = "LOW";
+            if (usage === 2) usageTxt = "MEDIUM";
+            if (usage === 3) usageTxt = "HIGH";
+            if (usage >= 4) usageTxt = "CRITICAL";
+            document.getElementById('power-usage').innerText = usageTxt;
+        }
+
+        function renderOffice() {
+            const canvas = document.getElementById('office-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Left Door Frame
+            ctx.fillStyle = doorLeft ? '#220505' : '#111115';
+            ctx.fillRect(0, 0, 100, canvas.height);
+            ctx.strokeStyle = doorLeft ? '#ff0033' : '#333';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 100, canvas.height);
+
+            // Right Door Frame
+            ctx.fillStyle = doorRight ? '#220505' : '#111115';
+            ctx.fillRect(canvas.width - 100, 0, 100, canvas.height);
+            ctx.strokeStyle = doorRight ? '#ff0033' : '#333';
+            ctx.strokeRect(canvas.width - 100, 0, 100, canvas.height);
+
+            if (flashlight) {
+                let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 20, canvas.width/2, canvas.height/2, 300);
+                grad.addColorStop(0, 'rgba(255, 255, 200, 0.35)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                monsters.forEach(m => {
+                    if (m.location === 4) {
+                        let xPos = m.side === 'left' ? 50 : canvas.width - 50;
+                        ctx.fillStyle = '#ff0000';
+                        ctx.beginPath();
+                        ctx.arc(xPos, canvas.height/2, 15, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        function renderCamera() {
+            if (!monitorOpen) return;
+            const canvas = document.getElementById('camera-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.fillStyle = '#0a0d0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.05)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.15)';
+            ctx.font = '36px "Share Tech Mono"';
+            ctx.fillText(getCameraName(currentCam), 30, canvas.height / 2);
+
+            monsters.forEach(m => {
+                if (m.location === currentCam) {
+                    ctx.fillStyle = '#ff0033';
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(canvas.width / 2 + (m.id * 30 - 45), canvas.height / 2, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(canvas.width / 2 + (m.id * 30 - 55), canvas.height / 2 - 5, 6, 6);
+                    ctx.fillRect(canvas.width / 2 + (m.id * 30 - 38), canvas.height / 2 - 5, 6, 6);
+                }
+            });
+
+            const staticCanvas = document.getElementById('static-canvas');
+            const sCtx = staticCanvas.getContext('2d');
+            staticCanvas.width = 200;
+            staticCanvas.height = 150;
+            let imgData = sCtx.createImageData(200, 150);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                let v = Math.random() * 255;
+                imgData.data[i] = v;
+                imgData.data[i+1] = v;
+                imgData.data[i+2] = v;
+                imgData.data[i+3] = 40;
+            }
+            sCtx.putImageData(imgData, 0, 0);
+        }
+
+        // Web Gamepad / Bluetooth Joy-Con Polling Engine
+        function pollGamepad() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gpFound = false;
+
+            for (let i = 0; i < gamepads.length; i++) {
+                const gp = gamepads[i];
+                if (gp) {
+                    gpFound = true;
+                    document.getElementById('gamepad-status').innerText = `Connected: ${gp.id.substring(0, 25)}...`;
+                    document.getElementById('gamepad-status').className = "text-green-400 glow-green";
+
+                    if (gameActive) {
+                        // Button 0 (A / Cross), Button 4 (L1) -> Left Door
+                        if (gp.buttons[4]?.pressed || (gp.buttons[0]?.pressed && !lastGamepadButtons[0])) {
+                            if (!lastGamepadButtons[4] && !lastGamepadButtons[0]) toggleDoor('left');
+                        }
+                        // Button 5 (R1), Button 1 (B / Circle) -> Right Door
+                        if (gp.buttons[5]?.pressed || (gp.buttons[1]?.pressed && !lastGamepadButtons[1])) {
+                            if (!lastGamepadButtons[5] && !lastGamepadButtons[1]) toggleDoor('right');
+                        }
+                        // Button 2 (X / Square), Button 6 (ZL) -> Flashlight
+                        if (gp.buttons[2]?.pressed || gp.buttons[6]?.pressed) {
+                            if (!lastGamepadButtons[2] && !lastGamepadButtons[6]) toggleFlashlight();
+                        }
+                        // Button 3 (Y / Triangle), Button 9 (Select/Options) -> Monitor Toggle
+                        if (gp.buttons[3]?.pressed || gp.buttons[9]?.pressed) {
+                            if (!lastGamepadButtons[3] && !lastGamepadButtons[9]) toggleMonitor();
+                        }
+
+                        // Save current button states to prevent re-triggering on hold
+                        lastGamepadButtons = gp.buttons.map(b => b.pressed);
+                    }
+                    break;
+                }
+            }
+
+            if (!gpFound) {
+                document.getElementById('gamepad-status').innerText = "Gamepad / Joy-Con: Disconnected";
+                document.getElementById('gamepad-status').className = "text-yellow-400";
+            }
+        }
+
+        // Keyboard Event Handlers
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'a' || e.key === 'A') toggleDoor('left');
+            if (e.key === 'd' || e.key === 'D') toggleDoor('right');
+            if (e.key === 'f' || e.key === 'F') toggleFlashlight();
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleMonitor();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (gameActive) {
+                renderOffice();
+                renderCamera();
+            }
+        });
+
+        window.onload = () => {
+            initMenu();
+            // Start continuous loop for Gamepad / Joy-Con input detection
+            setInterval(pollGamepad, 100);
+        };
+    </script>
+</body>
+</html>
